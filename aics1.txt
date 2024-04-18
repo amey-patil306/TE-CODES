@@ -1,0 +1,66 @@
+from collections import defaultdict
+import re
+
+class NaiveBayesSpamFilter:
+    def _init_(self):
+        self.spam_word_counts = defaultdict(int)
+        self.ham_word_counts = defaultdict(int)
+        self.spam_total = 0
+        self.ham_total = 0
+        self.alpha = 1  # Laplace smoothing parameter
+
+    def train(self, messages):
+        for message, is_spam in messages:
+            words = re.findall(r'\b\w+\b', message.lower())
+            for word in words:
+                if is_spam:
+                    self.spam_word_counts[word] += 1
+                    self.spam_total += 1
+                else:
+                    self.ham_word_counts[word] += 1
+                    self.ham_total += 1
+
+    def predict(self, message):
+        spam_score = 0
+        ham_score = 0
+        words = re.findall(r'\b\w+\b', message.lower())
+        for word in words:
+            spam_score += self.calculate_word_score(word, is_spam=True)
+            ham_score += self.calculate_word_score(word, is_spam=False)
+
+        if spam_score > ham_score:
+            return "Spam"
+        else:
+            return "Not Spam"
+
+    def calculate_word_score(self, word, is_spam):
+        if is_spam:
+            word_count = self.spam_word_counts[word]
+            total_count = self.spam_total
+        else:
+            word_count = self.ham_word_counts[word]
+            total_count = self.ham_total
+
+        # Apply Laplace smoothing
+        smoothed_count = word_count + self.alpha
+        smoothed_total = total_count + self.alpha * len(self.spam_word_counts)
+
+        # Calculate Log probability
+        return smoothed_count / smoothed_total
+
+# Define spam and non-spam words
+spam_messages = [
+    ("Buy now, limited-time offer!", True),
+    ("Get rich quick!", True),
+    ("Hello, how are you?", False),
+    ("Meeting at 10 AM tomorrow", False)
+]
+
+# Train the spam filter
+spam_filter = NaiveBayesSpamFilter()
+spam_filter.train(spam_messages)
+
+# Take input from the user and predict
+user_message = input("Enter a message: ")
+prediction = spam_filter.predict(user_message)
+print("Prediction:", prediction)
